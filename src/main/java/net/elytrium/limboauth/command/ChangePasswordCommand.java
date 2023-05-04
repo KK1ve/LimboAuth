@@ -59,20 +59,24 @@ public class ChangePasswordCommand implements SimpleCommand {
   }
 
   @Override
-  public void execute(SimpleCommand.Invocation invocation) {
+  public void execute(Invocation invocation) {
     CommandSource source = invocation.source();
     String[] args = invocation.arguments();
 
     if (source instanceof Player) {
       String username = ((Player) source).getUsername();
-      RegisteredPlayer player = AuthSessionHandler.fetchInfo(this.playerDao, username);
-
+      RegisteredPlayer player = AuthSessionHandler.fetchInfo(this.playerDao, username.substring(Settings.IMP.MAIN.OFFLINE_MODE_PREFIX.length()));
+      if(player == null){
+        player = AuthSessionHandler.fetchInfo(this.playerDao, username.substring(Settings.IMP.MAIN.ONLINE_MODE_PREFIX.length()));
+      }
       if (player == null) {
         source.sendMessage(this.notRegistered);
         return;
       }
 
       boolean onlineMode = player.getHash().isEmpty();
+      username = onlineMode ? username.substring(Settings.IMP.MAIN.ONLINE_MODE_PREFIX.length()):
+              username.substring(Settings.IMP.MAIN.OFFLINE_MODE_PREFIX.length());
       boolean needOldPass = this.needOldPass && !onlineMode;
       if (needOldPass) {
         if (args.length < 2) {
@@ -108,7 +112,7 @@ public class ChangePasswordCommand implements SimpleCommand {
   }
 
   @Override
-  public boolean hasPermission(SimpleCommand.Invocation invocation) {
+  public boolean hasPermission(Invocation invocation) {
     return Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.CHANGE_PASSWORD
         .hasPermission(invocation.source(), "limboauth.commands.changepassword");
   }

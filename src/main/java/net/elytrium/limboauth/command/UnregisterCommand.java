@@ -62,7 +62,7 @@ public class UnregisterCommand implements SimpleCommand {
   }
 
   @Override
-  public void execute(SimpleCommand.Invocation invocation) {
+  public void execute(Invocation invocation) {
     CommandSource source = invocation.source();
     String[] args = invocation.arguments();
 
@@ -70,12 +70,18 @@ public class UnregisterCommand implements SimpleCommand {
       if (args.length == 2) {
         if (this.confirmKeyword.equalsIgnoreCase(args[1])) {
           String username = ((Player) source).getUsername();
-          RegisteredPlayer player = AuthSessionHandler.fetchInfo(this.playerDao, username);
+          RegisteredPlayer player = AuthSessionHandler.fetchInfo(this.playerDao, username.substring(Settings.IMP.MAIN.OFFLINE_MODE_PREFIX.length()));
+          if(player == null){
+            player = AuthSessionHandler.fetchInfo(this.playerDao, username.substring(Settings.IMP.MAIN.ONLINE_MODE_PREFIX.length()));
+          }
           if (player == null) {
             source.sendMessage(this.notRegistered);
           } else if (player.getHash().isEmpty()) {
             source.sendMessage(this.crackedCommand);
           } else if (AuthSessionHandler.checkPassword(args[0], player, this.playerDao)) {
+            boolean onlineMode = player.getHash().isEmpty();
+            username = onlineMode ? username.substring(Settings.IMP.MAIN.ONLINE_MODE_PREFIX.length()):
+                    username.substring(Settings.IMP.MAIN.OFFLINE_MODE_PREFIX.length());
             try {
               this.plugin.getServer().getEventManager().fireAndForget(new AuthUnregisterEvent(username));
               this.playerDao.deleteById(username.toLowerCase(Locale.ROOT));
@@ -100,7 +106,7 @@ public class UnregisterCommand implements SimpleCommand {
   }
 
   @Override
-  public boolean hasPermission(SimpleCommand.Invocation invocation) {
+  public boolean hasPermission(Invocation invocation) {
     return Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.UNREGISTER
         .hasPermission(invocation.source(), "limboauth.commands.unregister");
   }
